@@ -59,7 +59,7 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public RefreshAuthenticationResponse refreshAuthentication(RefreshAuthenticationRequest request) {
+    public RefreshAuthenticationResponse refreshAuthentication(RefreshAuthenticationRequest request) throws JwtException {
         String accessToken = request.accessToken();
         String refreshToken = request.refreshToken();
 
