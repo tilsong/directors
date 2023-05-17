@@ -1,8 +1,8 @@
 package com.directors.infrastructure.exception.schedule;
 
-import java.time.LocalDateTime;
-
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 public class ClosedScheduleException extends RuntimeException {

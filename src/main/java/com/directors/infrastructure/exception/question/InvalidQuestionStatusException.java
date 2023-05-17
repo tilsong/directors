@@ -1,11 +1,9 @@
 package com.directors.infrastructure.exception.question;
 
-import org.springframework.http.HttpStatus;
-
 import com.directors.domain.question.QuestionStatus;
 import com.directors.infrastructure.exception.ExceptionCode;
-
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 @Getter
 public class InvalidQuestionStatusException extends RuntimeException {

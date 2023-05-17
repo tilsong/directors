@@ -1,16 +1,18 @@
 package com.directors.presentation.specialty.request;
 
 import com.directors.domain.specialty.Specialty;
+import com.directors.domain.specialty.SpecialtyInfo;
 import com.directors.domain.specialty.SpecialtyProperty;
+import lombok.Builder;
 
+@Builder
 public record CreateSpecialtyRequest(
-        String property,
+        String specialtyProperty,
         String description
 ) {
     public Specialty toEntity() {
         return Specialty.builder()
-                .property(SpecialtyProperty.fromValue(property))
-                .description(description)
+                .specialtyInfo(new SpecialtyInfo(SpecialtyProperty.fromValue(specialtyProperty), description))
                 .build();
     }
 }

@@ -1,61 +1,97 @@
 package com.directors.domain.user;
 
+import com.directors.domain.common.BaseEntity;
+import com.directors.domain.region.Address;
+import com.directors.domain.schedule.Schedule;
 import com.directors.domain.specialty.Specialty;
-import com.directors.infrastructure.exception.user.AuthenticationFailedException;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import com.directors.domain.specialty.SpecialtyInfo;
+import com.directors.domain.user.exception.NotEnoughRewardException;
+import jakarta.persistence.*;
+import lombok.*;
 
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Entity
+@Table(name = "users")
 @AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @Getter
-public class User {
-    private final String userId;
+public class User extends BaseEntity {
+	@Id
+	private String id;
 
-    private String password;
+	private String password;
 
-    private final String name;
+	private String name;
 
-    private final String nickname;
+	private String nickname;
 
-    private String email;
+	private String email;
 
-    private final String phoneNumber;
+	private String phoneNumber;
 
-    private Long reward;
+	private Long reward;
 
-    private UserStatus status;
+	@Enumerated(EnumType.STRING)
+	private UserStatus userStatus;
 
-    private Date joinedDate;
+	private LocalDateTime withdrawalDate;
 
-    private Date withdrawalDate;
+	@OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	private List<Specialty> specialtyList = new ArrayList<>();
 
-    private List<Specialty> specialtyList;
+	@OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	private List<Schedule> scheduleList = new ArrayList<>();
 
-    public void setPasswordByEncryption(String encryptedPassword) {
-        this.password = encryptedPassword;
-    }
+	@OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+	private UserRegion userRegion;
 
-    public void changeEmail(String oldEmail, String newEmail) {
-        validateEmail(oldEmail);
-        this.email = newEmail;
-    }
+	public Address getUserAddress() {
+		if (userRegion == null) {
+			return null;
+		}
+		return userRegion.getAddress();
+	}
 
-    public void setSpecialtyList(List<Specialty> specialtyList) {
-        this.specialtyList = specialtyList;
-    }
+	public List<SpecialtyInfo> getSpecialtyInfoList() {
+		return specialtyList
+			.stream()
+			.map(Specialty::getSpecialtyInfo)
+			.collect(Collectors.toUnmodifiableList());
+	}
 
-    public void withdrawal(Date withdrawalDate) {
-        this.status = UserStatus.WITHDRAWN;
-        this.withdrawalDate = withdrawalDate;
-    }
+	public List<LocalDateTime> getScheduleStartTimes() {
+		return scheduleList.stream()
+			.map(Schedule::getStartTime)
+			.collect(Collectors.toList());
+	}
 
-    private void validateEmail(String email) {
-        if (this.email.equals(email)) {
-            throw new AuthenticationFailedException(this.userId);
-        }
-    }
+	public void setPasswordByEncryption(String encryptedPassword) {
+		this.password = encryptedPassword;
+	}
+
+	public void changeEmail(String newEmail) {
+		this.email = newEmail;
+	}
+
+	public void withdrawal(LocalDateTime withdrawalTime) {
+		this.userStatus = UserStatus.WITHDRAWN;
+		this.withdrawalDate = withdrawalDate;
+	}
+
+	public void addReword() {
+		this.reward += 1L;
+	}
+
+	public void paymentReward() {
+		if (this.reward <= 0) {
+			throw new NotEnoughRewardException(this.id);
+		}
+
+		this.reward -= 1L;
+	}
 }
