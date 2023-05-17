@@ -1,6 +1,7 @@
 package com.directors.learningTest.geoApiTest;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,12 +61,10 @@ public class GetAdministrativeDistrictTest {
         accessToken = resultMap.get("accessToken");
     }
 
+    @Disabled
     @Test
     public void 지오코딩_API요청_성공테스트() {
         // GIVEN
-        long x = 961487;  // UTM-K 기반 x, y 좌표
-        long y = 1949977;
-
         UriComponents uri = UriComponentsBuilder  // 요청 uri 정의
                 .fromHttpUrl(지오코딩RequestUrl)
                 .queryParam("address", "서울시 중구 회현동")
@@ -91,7 +90,6 @@ public class GetAdministrativeDistrictTest {
         // GIVEN
         long x = 961487;  // UTM-K 기반 x, y 좌표
         long y = 1949977;
-
         UriComponents uri = UriComponentsBuilder  // 요청 uri 정의
                 .fromHttpUrl(리버스지오코딩RequestUrl)
                 .queryParam("x_coor", x)
@@ -115,6 +113,7 @@ public class GetAdministrativeDistrictTest {
         assertThat(resultMap.get("emdong_nm")).isEqualTo("송정동");
     }
 
+    @Disabled
     @Test
     public void 좌표에_대한_행정동_획득_동이아닌_지역명_API요청_성공테스트() {
         // GIVEN
@@ -144,6 +143,7 @@ public class GetAdministrativeDistrictTest {
         assertThat(resultMap.get("emdong_nm")).isEqualTo("호저면");
     }
 
+    @Disabled
     @Test
     public void 좌표변환_API요청_성공테스트() {
         // GIVEN
@@ -170,6 +170,7 @@ public class GetAdministrativeDistrictTest {
         assertThat(resultMap.get("posY")).isEqualTo(7843189.782712619);
     }
 
+    @Disabled
     @Test
     public void 좌표변환_API요청_성공테스트2() {
         // GIVEN

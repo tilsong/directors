@@ -2,16 +2,16 @@ package com.directors.application.user;
 
 import com.directors.domain.auth.TokenRepository;
 import com.directors.domain.user.PasswordManager;
-import com.directors.domain.user.User;
 import com.directors.domain.user.UserRepository;
 import com.directors.domain.user.UserStatus;
-import com.directors.infrastructure.exception.user.AuthenticationFailedException;
+import com.directors.domain.user.exception.AuthenticationFailedException;
 import com.directors.presentation.user.request.WithdrawRequest;
+import com.directors.presentation.user.response.WithdrawResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -22,29 +22,27 @@ public class WithdrawService {
     private final TokenRepository tokenRepository;
 
     @Transactional
-    public void withdraw(WithdrawRequest withdrawRequest, String userIdByToken) {
-        String userId = withdrawRequest.userId();
-        String password = withdrawRequest.password();
+    public WithdrawResponse withdraw(WithdrawRequest withdrawRequest, String userIdByToken) {
+        var userId = withdrawRequest.userId();
+        var password = withdrawRequest.password();
 
         validateUserIds(userId, userIdByToken);
 
-        var user = userRepository.findByIdAndUserStatus(userId, UserStatus.JOINED);
-
-        User loadedUser = user
+        var user = userRepository
+                .findByIdAndUserStatus(userId, UserStatus.JOINED)
                 .filter(u -> pm.checkPassword(password, u.getPassword()))
                 .orElseThrow(() -> new AuthenticationFailedException(userId));
 
-        loadedUser.withdrawal(new Date());
+        user.withdrawal(LocalDateTime.now());
 
-        userRepository.save(loadedUser);
+        tokenRepository.deleteAllTokenByUserId(user.getId());
 
-        tokenRepository.deleteAllTokenByUserId(loadedUser.getUserId());
+        return new WithdrawResponse(userId);
     }
 
-    private static void validateUserIds(String firstUserId, String secondUserId) {
+    private void validateUserIds(String firstUserId, String secondUserId) {
         if (!firstUserId.equals(secondUserId)) {
             throw new AuthenticationFailedException(firstUserId);
         }
     }
-
 }

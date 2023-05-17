@@ -4,16 +4,15 @@ import com.directors.domain.region.Address;
 import com.directors.domain.region.Region;
 import com.directors.domain.region.RegionApiClient;
 import com.directors.domain.region.RegionRepository;
-import com.directors.domain.user.UserRegion;
-import com.directors.domain.user.UserRegionRepository;
+import com.directors.domain.region.exception.RegionNotFoundException;
+import com.directors.domain.user.*;
+import com.directors.domain.user.exception.NoSuchUserException;
 import com.directors.presentation.user.request.AuthenticateRegionRequest;
 import com.directors.presentation.user.response.AuthenticateRegionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -22,16 +21,18 @@ public class AuthenticateRegionService {
     private final RegionApiClient regionApiClient;
     private final RegionRepository regionRepository;
     private final UserRegionRepository userRegionRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public AuthenticateRegionResponse authenticate(AuthenticateRegionRequest request, String userId) {
         var addressByApi = regionApiClient.findRegionAddressByLocation(request.latitude(), request.longitude());
-        var region = regionRepository.findByFullAddress(addressByApi.fullAddress())
-                .orElseThrow(() -> new NoSuchElementException());
+
+        var region = regionRepository.findByFullAddress(addressByApi.getFullAddress())
+                .orElseThrow(() -> new RegionNotFoundException(addressByApi.getFullAddress()));
 
         var userAddress = updateUserRegionAddress(userId, region);
 
-        return new AuthenticateRegionResponse(userAddress.fullAddress(), userAddress.unitAddress());
+        return new AuthenticateRegionResponse(userAddress.getFullAddress(), userAddress.getUnitAddress());
     }
 
     private Address updateUserRegionAddress(String userId, Region region) {
@@ -41,21 +42,20 @@ public class AuthenticateRegionService {
         return saveUserRegion(userId, region).getAddress();
     }
 
-    private UserRegion saveUserRegion(String userId, Region region) {
-        UserRegion savedUserRegion;
-        var newUserRegion = UserRegion.of(region.getAddress(), userId, region.getId());
-
-        savedUserRegion = userRegionRepository.save(newUserRegion);
-        return savedUserRegion;
-    }
-
     private UserRegion updateExistUserRegion(String userId, Region region) {
         var userRegion = userRegionRepository.findByUserId(userId).get();
 
-        userRegion.setAddress(region.getAddress());
-        userRegion.setRegionId(region.getId());
+        userRegion.updateRegionInfo(region.getAddress(), region);
 
-        return userRegionRepository.save(userRegion);
+        return userRegion;
     }
 
+    private UserRegion saveUserRegion(String userId, Region region) {
+        User user = userRepository
+                .findByIdAndUserStatus(userId, UserStatus.JOINED)
+                .orElseThrow(() -> new NoSuchUserException(userId));
+        var newUserRegion = UserRegion.of(region.getAddress(), user, region);
+
+        return userRegionRepository.save(newUserRegion);
+    }
 }

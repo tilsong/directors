@@ -1,12 +1,10 @@
 package com.directors.infrastructure.exception.schedule;
 
-import java.time.LocalDateTime;
-
+import com.directors.infrastructure.exception.ExceptionCode;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-import com.directors.infrastructure.exception.ExceptionCode;
-
-import lombok.Getter;
+import java.time.LocalDateTime;
 
 @Getter
 public class InvalidMeetingRequest extends RuntimeException {

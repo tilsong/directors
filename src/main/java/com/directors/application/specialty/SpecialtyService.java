@@ -1,37 +1,53 @@
 package com.directors.application.specialty;
 
 import com.directors.domain.specialty.Specialty;
+import com.directors.domain.specialty.SpecialtyProperty;
 import com.directors.domain.specialty.SpecialtyRepository;
+import com.directors.domain.specialty.exception.NoSuchSpecialtyException;
+import com.directors.domain.user.UserRepository;
+import com.directors.domain.user.UserStatus;
+import com.directors.domain.user.exception.NoSuchUserException;
+import com.directors.presentation.specialty.request.CreateSpecialtyRequest;
+import com.directors.presentation.specialty.request.UpdateSpecialtyRequest;
+import com.directors.presentation.specialty.response.CreateSpecialtyResponse;
+import com.directors.presentation.specialty.response.UpdateSpecialtyResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
 public class SpecialtyService {
 
     private final SpecialtyRepository specialtyRepository;
+    private final UserRepository userRepository;
 
     @Transactional
-    public void createSpecialty(Specialty specialty, String userIdByToken) {
-        specialty.setUserId(userIdByToken);
-        specialtyRepository.save(specialty);
+    public CreateSpecialtyResponse createSpecialty(CreateSpecialtyRequest request, String userId) {
+        Specialty specialty = request.toEntity();
+        var user = userRepository.findByIdAndUserStatus(userId, UserStatus.JOINED)
+                .orElseThrow(() -> new NoSuchUserException(userId));
+        specialty.setUser(user);
+
+        return CreateSpecialtyResponse.from(specialtyRepository.save(specialty));
     }
 
     @Transactional
-    public void updateSpecialty(Specialty requestSpecialty) {
-        var specialtyByFieldId = specialtyRepository.findByFieldId(requestSpecialty.getId());
-        var specialty = specialtyByFieldId.orElseThrow(NoSuchElementException::new);
+    public UpdateSpecialtyResponse updateSpecialty(UpdateSpecialtyRequest request) {
+        var specialty = specialtyRepository.findById(request.id())
+                .orElseThrow(NoSuchSpecialtyException::new);
 
-        specialty.setSpecialtyInfo(requestSpecialty.getSpecialtyInfo().property(), requestSpecialty.getSpecialtyInfo().description());
+        specialty.setSpecialtyInfo(SpecialtyProperty.fromValue(request.property()), request.description());
 
-        specialtyRepository.save(specialty);
+        return UpdateSpecialtyResponse.from(specialty);
     }
 
     @Transactional
-    public void deleteSpecialty(String specialty) {
-        specialtyRepository.delete(specialty);
+    public void deleteSpecialty(Long specialtyId) {
+        var specialty = specialtyRepository
+                .findById(specialtyId)
+                .orElseThrow(NoSuchSpecialtyException::new);
+
+        specialtyRepository.delete(specialty.getId());
     }
 }

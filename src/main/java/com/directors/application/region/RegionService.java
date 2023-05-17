@@ -3,7 +3,9 @@ package com.directors.application.region;
 import com.directors.domain.region.Address;
 import com.directors.domain.region.Region;
 import com.directors.domain.region.RegionRepository;
+import com.directors.domain.user.UserRegion;
 import com.directors.domain.user.UserRegionRepository;
+import com.directors.domain.user.exception.UserRegionNotFoundException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +30,13 @@ public class RegionService {
     private final UserRegionRepository userRegionRepository;
 
     @PostConstruct
-    private void loadRegionData() {
+    @Transactional
+    void loadRegionData() {
+        // TODO: 04.22 추후 분산 서버 환경을 고려한 로직 변경이 필요.
+        if (regionRepository.count() != 0) {
+            return;
+        }
+
         String pathPrefix = "/regionCSV/";
         String pathSuffix = "_좌표.csv";
         String[] regions = {
@@ -42,9 +50,8 @@ public class RegionService {
             var reader = new BufferedReader(new InputStreamReader(inputStream));
             regionDataLines = reader.lines().collect(Collectors.toList());
 
-            var collect = regionDataLines.stream()
-                    .map(this::regionDataLineToRegion)
-                    .collect(Collectors.toList());
+            List<Region> collect = regionDataLines.stream()
+                    .map(this::regionDataLineToRegion).toList();
 
             regionRepository.saveAll(collect);
         }
@@ -52,15 +59,29 @@ public class RegionService {
 
     @Transactional
     public List<Address> getNearestAddress(String userId, int distance) {
+        UserRegion userRegion = getUserRegion(userId);
+
+        return getNearestRegion(userRegion.getRegion(), distance)
+                .stream()
+                .map(Region::getAddress)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<Long> getNearestRegionId(String userId, int distance) {
+        UserRegion userRegion = getUserRegion(userId);
+
+        return getNearestRegion(userRegion.getRegion(), distance)
+                .stream()
+                .map(Region::getId)
+                .collect(Collectors.toList());
+    }
+
+    private UserRegion getUserRegion(String userId) {
         var userRegion = userRegionRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException()); // TODO: 04.05 먼저 지역 인증이 필요하다는 예외가 필요.
-        var region = regionRepository.findByRegionId(userRegion.getRegionId()).orElseThrow();
-
-        return getNearestRegion(region, distance)
-                .stream()
-                .map(reg -> reg.getAddress())
-                .collect(Collectors.toList());
+                .orElseThrow(() -> new UserRegionNotFoundException(userId));
+        return userRegion;
     }
 
     private Region regionDataLineToRegion(String regionLine) {
@@ -75,6 +96,6 @@ public class RegionService {
     }
 
     private List<Region> getNearestRegion(Region region, int distance) {
-        return regionRepository.findRegionWithin(region, distance * KILOMETER);
+        return regionRepository.findRegionWithin(region.getPoint(), distance * KILOMETER);
     }
 }
